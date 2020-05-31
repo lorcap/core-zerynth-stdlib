@@ -110,21 +110,28 @@ def get_utc(verbosity=2):
         return None
     utc_result = _rtc_drv.__ctl__(DRV_CMD_READ,_rtc_drvname&0xff,verbosity)
 
-    if verbosity < 2:
-        return utc_result
+    if verbosity == 2:
+        time_info = TimeInfo()
+        time_info.tv_seconds = utc_result[0]
+        time_info.tv_microseconds = utc_result[1]
 
-    time_info = TimeInfo()
-    time_info.tv_seconds = utc_result[0]
-    time_info.tv_microseconds = utc_result[1]
+        time_info.tm_sec = utc_result[2]
+        time_info.tm_min = utc_result[3]
+        time_info.tm_hour = utc_result[4]
+        time_info.tm_mday = utc_result[5]
+        time_info.tm_month = utc_result[6]
+        time_info.tm_year = utc_result[7]
+        time_info.tm_wday = utc_result[8]
+        time_info.tm_yday = utc_result[9]
+        time_info.tm_isdst = utc_result[10]
 
-    time_info.tm_sec = utc_result[2]
-    time_info.tm_min = utc_result[3]
-    time_info.tm_hour = utc_result[4]
-    time_info.tm_mday = utc_result[5]
-    time_info.tm_month = utc_result[6]
-    time_info.tm_year = utc_result[7]
-    time_info.tm_wday = utc_result[8]
-    time_info.tm_yday = utc_result[9]
-    time_info.tm_isdst = utc_result[10]
+        return time_info
 
-    return time_info
+    elif verbosity == 1:
+        return (utc_result[0], utc_result[1])
+
+    elif verbosity == 0:
+        return utc_result[0]
+
+    else:
+        return None
