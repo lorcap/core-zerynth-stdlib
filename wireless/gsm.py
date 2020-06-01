@@ -122,6 +122,17 @@ def network_info():
     """        
     return __default_net["gsm"].network_info()
 
+def rtc():
+    """
+.. function:: get_clock()
+
+    Return a 7-integer tuple (YYYY,MM,DD,hh,mm,ss,tz where tz represents the difference in minutes with GMT) representing the current network's clock time.
+
+    The underlying gsm driver may require the PIN insertion and/or a network connection before the command execution.
+
+    """
+    return __default_net["gsm"].rtc()
+
 def rssi():
     """
 .. function:: rssi()        
