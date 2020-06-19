@@ -800,6 +800,41 @@ def min(*args):
     return tmp
 
 @builtin
+def round(number, ndigits=None):
+    """
+.. function:: round(number[, ndigits])
+
+   Return *number* rounded to *ndigits* precision after the decimal point. If
+   *ndigits* is omitted or is ``None``, it returns the nearest integer to its
+   input.
+
+   For the built-in types supporting :func:`round`, values are rounded to the
+   closest multiple of 10 to the power minus *ndigits*; if two multiples are
+   equally close, rounding is done toward the even choice (so, for example, both
+   ``round(-1.5)`` and ``round(-0.5)`` are ``0``, and ``round(1.5)`` is ``2``).
+   Any integer value is valid for *ndigits* (positive, zero, or negative). The
+   return value is an integer if *ndigits* is omitted or ``None``. Otherwise
+   the return value has the same type as number.
+
+   For a general Python object *number*, :func:`round` is not implemented.
+
+    """
+    N = abs(number)
+    if ndigits == None:
+        s = 1 if number >= 0 else -1
+        n = int(N)
+        r = N - n
+        if r > 0.5 or (r == 0.5 and n % 2 == 1):
+            n += 1
+        return s*n
+    elif type(ndigits) in (PSMALLINT, PINTEGER):
+        shift10 = 10**ndigits
+        ret = round(N*shift10, None)/shift10
+        return ret if type(N) == PFLOAT else int(ret)
+    else:
+        raise TypeError
+
+@builtin
 def len(x):
     """
 .. function:: len(s)
