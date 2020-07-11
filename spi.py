@@ -1,3 +1,5 @@
+def debug(*args):
+    print('spi:', *args)
 """
 .. module:: spi
 
@@ -76,7 +78,7 @@ to the master while it is receiving data from the master. Therefore, spi operati
 
     """
 
-
+import threading
 
 __define(_SPIDRIVER_START,0)
 __define(_SPIDRIVER_STOP,1)
@@ -156,23 +158,48 @@ The Spi class
 
     
     """    
-    def __init__(self, nss, drvname=SPI0, clock=12000000, bits=SPI_8_BITS, mode=SPI_MODE_LOW_FIRST):
+    def __init__(self, nss, drvname=SPI0, clock=12000000, bits=SPI_8_BITS, mode=SPI_MODE_LOW_FIRST,
+                 sclk=0, mosi=0, miso=0):
         global _ispi
         self.clock = clock
         self.bits = bits
-        self.drv = __driver(drvname)
-        self.drvid = drvname&0xff
         self.mode = mode
+        debug('nss')
         if type(nss)==PSMALLINT:
             self.nss = nss
         else:
             raise TypeError
         pinMode(self.nss,OUTPUT)
         digitalWrite(self.nss,HIGH);
+
+        if sclk==0 and mosi==0 and miso==0:
+            self.drv = __driver(drvname)
+            self.drvid = drvname&0xff
+        else:
+            debug('sclk')
+            if type(sclk)!=PSMALLINT\
+            or type(mosi)!=PSMALLINT\
+            or type(miso)!=PSMALLINT:
+                raise TypeError
+            debug('==')
+            if nss ==sclk or nss ==mosi or nss ==miso\
+            or sclk==mosi or sclk==miso\
+            or miso==sclk:
+                debug(nss, sclk, mosi, miso)
+                raise ValueError
+
+            debug('=')
+            self.sclk = sclk
+            self.mosi = mosi
+            self.miso = miso
+            self._lock = None
+            self.drv = self
+            self.drvid = drvname
+            debug(self.sclk, self.mosi, self.miso, self.drvid)
+
         if self.drvid not in _ispi:
             _ispi[self.drvid]=[set(),None]
         _ispi[self.drvid][0].add(self)
-
 
     def start(self):
         pass
@@ -219,6 +246,7 @@ The Spi class
         *data* is written to MOSI, and a sequence of bytes read from MISO is returned.
 
         """    
+        debug('exchange')
         return self.drv.__ctl__(_SPIDRIVER_EXCHANGE,self.drvid,data)
 
     def _stop(self):
@@ -236,11 +264,12 @@ The Spi class
         If necessary the spi bus is configured and started.
 
         """
+        debug('select')
         if self != _ispi[self.drvid][1]:
             self._stop()   # stops the spi bus
             self._start()  # and reconfigures it with current parameters
-        for x in _ispi[self.drvid][0]:
-            digitalWrite(x.nss,HIGH);
+        self.unselect()
+        self.drv.__ctl__(_SPIDRIVER_SELECT,self.drvid)
         digitalWrite(self.nss,LOW);
 
     def unselect(self):
@@ -250,6 +279,8 @@ The Spi class
         All slaves are unselected.
 
         """
+        debug('unselect')
+        self.drv.__ctl__(_SPIDRIVER_UNSELECT,self.drvid)
         for x in _ispi[self.drvid][0]:
             digitalWrite(x.nss,HIGH);
 
@@ -280,4 +311,110 @@ The Spi class
         """
         self._stop()
 
+    def __ctl__(self, cmd, drvid, *args):
+        debug('__ctl__')
+        if cmd==_SPIDRIVER_READ:
+            data_out = []
+            for i in range(args):
+                data_out.append(self._exchange(0xffff))
+            return data_out
+
+        elif cmd==_SPIDRIVER_WRITE:
+            for data in args:
+                self._exchange(data)
+
+        elif cmd==_SPIDRIVER_EXCHANGE:
+            debug('_SPIDRIVER_EXCHANGE')
+            data_out = []
+            for data in args:
+                data_out.append(self._exchange(data))
+            return data_out
+
+        elif cmd in (_SPIDRIVER_SELECT, _SPIDRIVER_UNSELECT):
+            debug('_SPIDRIVER_(UN)SELECT')
+            pol = self.mode in (SPI_MODE_HIGH_FIRST, SPI_MODE_HIGH_SECOND)
+            debug('pol:',pol)
+            digitalWrite(self.sclk, pol)
+
+        elif cmd==_SPIDRIVER_START:
+            debug('_SPIDRIVER_START')
+            self._bits = 0x8000 if self.bits==SPI_16_BITS else 0x0080
+            if self.mode in (SPI_MODE_LOW_FIRST, SPI_MODE_HIGH_FIRST):
+                self._exchange = self._exchange_first
+            elif self.mode in (SPI_MODE_HIGH_SECOND, SPI_MODE_HIGH_SECOND):
+                self._exchange = self._exchange_second
+
+        elif cmd==_SPIDRIVER_STOP:
+            pass
+
+        elif cmd==_SPIDRIVER_LOCK:
+            if self._lock is None:
+                self._lock = threading.Lock()
+            return self._lock.acquire()
+
+        elif cmd==_SPIDRIVER_UNLOCK:
+            self._lock is None or self._lock.release()
+
+    def _exchange_first(self, data_out):
+        data_in = 0
+        bit = self._bits
+        while bit:
+            digitalWrite(self.mosi, data_out & bit)
+            pinToggle(self.sclk)
+            if digitalRead(self.miso): data_in |= bit
+            pinToggle(self.sclk)
+            bit >>= 1
+        return data_in
+
+    def _exchange_second(self, data_out):
+        data_in = 0
+        bit = self._bits
+        while bit:
+            pinToggle(self.sclk)
+            digitalWrite(self.mosi, data_out & bit)
+            pinToggle(self.sclk)
+            if digitalRead(self.miso): data_in |= bit
+            bit >>= 1
+        return data_in
+
+#
+#    def _exchange_low_first(self, data_out, bit):
+#        data_in = 0
+#        while bit:
+#            digitalWrite(self.mosi, data_out & bit)
+#            digitalWrite(self.sclk, HIGH)
+#            if digitlaRead(self.miso): data_in |= bit
+#            digitalWrite(self.sclk, LOW)
+#            bit >>= 1
+#        return data_in
+#
+#    def _exchange_low_second(self, data_out, bit):
+#        data_in = 0
+#        while bit:
+#            digitalWrite(self.sclk, HIGH)
+#            digitalWrite(self.mosi, data_out & bit)
+#            digitalWrite(self.sclk, LOW)
+#            if digitlaRead(self.miso): data_in |= bit
+#            bit >>= 1
+#        return data_in
+#
+#    def _exchange_high_first(self, data_out, bit):
+#        data_in = 0
+#        while bit:
+#            digitalWrite(self.mosi, data_out & bit)
+#            digitalWrite(self.sclk, LOW)
+#            if digitlaRead(self.miso): data_in |= bit
+#            digitalWrite(self.sclk, HIGH)
+#            bit >>= 1
+#        return data_in
+#
+#    def _exchange_high_second(self, data_out, bit):
+#        data_in = 0
+#        while bit:
+#            digitalWrite(self.sclk, LOW)
+#            digitalWrite(self.mosi, data_out & bit)
+#            digitalWrite(self.sclk, HIGH)
+#            if digitlaRead(self.miso): data_in |= bit
+#            bit >>= 1
+#        return data_in
 

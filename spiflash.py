@@ -1,3 +1,5 @@
+def debug(*args):
+    print('spiflash:', *args)
 """
 .. module:: spiflash
 
@@ -59,8 +61,10 @@ SpiFlash class
 
     """
 
-    def __init__(self, drvname, cs, clock=1000000):
-        spi.Spi.__init__(self, cs, drvname, clock=clock)
+    def __init__(self, drvname, cs, clock=1000000,
+                 sclk=0, mosi=0, miso=0):
+        debug('__init__')
+        spi.Spi.__init__(self, cs, drvname, clock, sclk=sclk, mosi=mosi, miso=miso)
 
         self._cs = cs
 
@@ -208,6 +212,7 @@ SpiFlash class
 
         """
 
+        debug('chip_id')
         pkt = bytearray(n+1)
         pkt[0]=0x9f
         pkt[1:] = b'\xff'*n

@@ -62,6 +62,10 @@ err_t _spi_ctl(int nargs, PObject *self, PObject **args, PObject **res) {
                 return -code;
         }
         break;
+        case _SPIDRIVER_SELECT:
+        break;
+        case _SPIDRIVER_UNSELECT:
+        break;
         case _SPIDRIVER_LOCK: {
             RELEASE_GIL();
             code = vhalSpiLock(drvid);
