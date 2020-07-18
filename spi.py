@@ -194,6 +194,7 @@ The Spi class
         *data* is written to MOSI, bits on MISO are ignored.
 
         """
+        print('spi:write:' + '%02d '*len(data) % [d for d in data])
         self.drv.__ctl__(_SPIDRIVER_WRITE,self.drvid,data)
 
     def read(self, n):
@@ -203,7 +204,9 @@ The Spi class
         Returns a sequence of *n* bytes read from MISO. MOSI is ignored.
 
         """
-        return self.drv.__ctl__(_SPIDRIVER_READ,self.drvid,n)
+        data = self.drv.__ctl__(_SPIDRIVER_READ,self.drvid,n)
+        print('spi:read:' + '%02d '*len(data) % [d for d in data])
+        return data
 
     def read_into(self, buffer):
         """
@@ -263,6 +266,7 @@ The Spi class
         If necessary the spi bus is configured and started.
 
         """
+        print('spi:select')
         if self != _ispi[self.drvid][1]:
             self._stop()   # stops the spi bus
             self._start()  # and reconfigures it with current parameters
@@ -277,6 +281,7 @@ The Spi class
         All slaves are unselected.
 
         """
+        print('spi:unselect')
         for x in _ispi[self.drvid][0]:
             digitalWrite(x.nss,HIGH);
 

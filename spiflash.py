@@ -29,6 +29,7 @@ SERIAL_FLASH_CMD_WRSR  = 0x01
 SERIAL_FLASH_CMD_SER   = 0xD8
 
 def _parse_addr(addr,n):
+    print('spiflash:_parse_addr:', addr, type(addr), n)
     if type(addr) == PBYTEARRAY:
         return addr
     res = bytearray(n)
@@ -74,6 +75,7 @@ SpiFlash class
         self.write_enable()
 
     def _write_and_wait(self, pkt):
+        print('spiflash:_write_and_wait')
         self.select()
         self.write(pkt)
         self.unselect()
@@ -99,6 +101,7 @@ SpiFlash class
         Automatically called by :meth:`write_data`, :meth:`erase_sector`, :meth:`chip_erase` methods.
 
         """
+        print('spiflash:write_enable')
         pkt = bytearray(1)
         pkt[0] = SERIAL_FLASH_CMD_WREN
         self.select()
@@ -136,6 +139,7 @@ SpiFlash class
             my_flash[addr] = data
 
         """
+        print('spiflash:write_data', addr, len(data), type(data))
         self.write_enable()
 
         pkt = bytearray()
@@ -176,6 +180,7 @@ SpiFlash class
             my_data = my_flash[addr:addr+n]
 
         """
+        print('spiflash:read_data:',addr,n)
         pkt = bytearray()
         pkt.append(SERIAL_FLASH_CMD_READ)
         pkt.extend(_parse_addr(addr,3))
