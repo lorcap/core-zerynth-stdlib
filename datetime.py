@@ -30,9 +30,9 @@ information about the offset from UTC time and the time zone name.
 
 The following classes are provided:
 
-* :class:`~timedelta`
-* :class:`~timezone`
-* :class:`~datetime`
+* :class:`timedelta`
+* :class:`timezone`
+* :class:`datetime`
 
 
 timedelta Objects
@@ -103,7 +103,13 @@ exact (no information is lost).
 
 .. method:: add(other)
 
-   Return the difference between two durations.
+   Return a :class:`timedelta` which represents the sum of two durations.
+
+
+.. method:: sub(other)
+
+   Return a :class:`timedelta` which represents the difference between
+   two durations.
 
 
 .. method:: mul(other)
@@ -211,6 +217,7 @@ Examples of timedelta arithmetic::
     print(nine_years)                   # 3285d 00:00:00
     three_years = nine_years.floordiv(3)
     print(three_years)                  # 1095d 00:00:00
+
 
 timezone Objects
 ================
@@ -396,6 +403,7 @@ to last Sunday of October). ::
     print(tz.isoformat(datetime(2011, 8, 1))) # UTC+02:00
     print(tz.tzname   (datetime(2011, 8, 1))) # CEST
 
+
 datetime Objects
 ================
 
@@ -439,6 +447,7 @@ Constructors
        YYYY-MM-DD[*HH[:MM[:SS[.fff[fff]]]][+HH:MM[:SS[.ffffff]]]]
 
    where ``*`` can match any single character.
+
 
 .. function:: fromordinal(n)
 
