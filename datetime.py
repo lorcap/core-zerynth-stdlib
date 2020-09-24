@@ -769,16 +769,19 @@ class datetime:
     MAXYEAR = 9999
 
     def __init__(self, year, month, day, hour=0, minute=0, second=0, tzinfo=None):
-        if not (self.MINYEAR <= year <= self.MAXYEAR and\
-                1 <= month  <= 12 and\
-                1 <= day    <= _days_in_month(year, month) and\
-                0 <= hour   <  24 and\
-                0 <= minute <  60 and\
-                0 <= second <  60):
+        if year == 0 and month == 0 and day > 0:
+            self._ord = day
+        elif self.MINYEAR <= year <= self.MAXYEAR\
+        and  1 <= month  <= 12\
+        and  1 <= day    <= _days_in_month(year, month)\
+        and  0 <= hour   <  24\
+        and  0 <= minute <  60\
+        and  0 <= second <  60:
+            self._ord = _ymd2ord(year, month, day)
+        else:
             raise ValueError
-        self._tz = tzinfo
-        self._ord = _ymd2ord(year, month, day)
         self._time = timedelta(hour, minute, second)
+        self._tz = tzinfo
 
     def add(self, other):
         time = self._time.add(other)
@@ -992,4 +995,4 @@ def fromisoformat(s):
 def fromordinal(n):
     if not 1 <= n <= 3652059:
         raise ValueError
-    return datetime(*_ord2ymd(n))
+    return datetime(0, 0, n)
