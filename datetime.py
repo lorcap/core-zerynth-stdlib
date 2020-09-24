@@ -35,6 +35,13 @@ The following classes are provided:
 * :class:`datetime`
 
 
+Python's classes `date()
+<https://docs.python.org/3/library/datetime.html#date-objects>`_ and `time()
+<https://docs.python.org/3/library/datetime.html#time-objects>`_
+are mimicked with a class :class:`datetime` set to midnight, and a class
+:class:`timedelta` in the range [0-24h).
+
+
 timedelta Objects
 =================
 
@@ -184,6 +191,20 @@ exact (no information is lost).
 .. method:: abs()
 
    Return a positive delta.
+
+
+.. method:: isoformat()
+
+   This method mimics Python's `isoformat()
+   <https://docs.python.org/3/library/datetime.html#datetime.time.isoformat>`_
+   for *time* objects by returning a string in the format ``HH:MM:SS``, where
+   ``HH``, ``MM``, and ``SS`` are two digits of the time delta's hours,
+   minutes and seconds, respectively, since midnight.  This is only if value
+   is within the range [0-24h).
+
+   For other values, it returns the format ``±Dd HH:MM:SS``, where ``±`` is
+   the sign of the delta and ``D`` its number of days. This is *not* ISO
+   compliant, but provides a complete representation.
 
 
 .. method:: tuple(sign_pos='')
@@ -457,6 +478,16 @@ Constructors
    minute and second of the result are all 0, and *tzinfo* is ``None``.
 
 
+.. function:: combine(date, time, tzinfo)
+
+   Return a new :class:`datetime` object whose date components are equal to
+   the given *date* object’s (see :meth:`datetime.date`), and whose time
+   components are equal to the given *time* object’s (see
+   :meth:`datetime.time`). If the *tzinfo* argument is provided, its value
+   is used to set the *tzinfo* attribute of the result, otherwise the
+   *tzinfo* attribute of the *date* argument is used.
+
+
 Class attributes
 ----------------
 
@@ -568,6 +599,18 @@ Class methods
    ``YYYY-MM-DDTHH:MM:SS``. If :meth:`datetime.utcoffset` does not return
    ``None``, a string is appended, giving the UTC offset:
    ``YYYY-MM-DDTHH:MM:SS+HH:MM``.
+
+
+.. method:: date()
+
+   Return a :class:`datetime` instance whose date and time zone components
+   are equal to the input object and time is set to midnight.
+
+
+.. method:: time()
+
+   Return a :class:`timedelta` instance whose time components are equal to
+   the input object.
 
 
 .. method:: toordinal()
@@ -711,7 +754,14 @@ class timedelta:
         return timedelta(seconds=__builtins__.abs(self._s))
 
     def __str__(self):
-        return "%s%dd %02d:%02d:%02d" % self.tuple()
+        return self.isoformat()
+
+    def isoformat(self):
+        t = self.tuple()
+        if 0 <= self._s < 86400:
+            return "%02d:%02d:%02d" % t[2:]
+        else:
+            return "%s%dd %02d:%02d:%02d" % t
 
     def tuple(self, sign_pos=''):
         s = self._s
@@ -837,6 +887,12 @@ class datetime:
 
     def dst(self):
         return None if self._tz is None else self._tz.dst(self)
+
+    def date(self):
+        return datetime(0, 0, self.toordinal(), tzinfo=self._tz)
+
+    def time(self):
+        return timedelta(seconds=self._time.total_seconds())
 
     def tzname(self):
         return None if self._tz is None else self._tz.tzname(self)
@@ -996,3 +1052,10 @@ def fromordinal(n):
     if not 1 <= n <= 3652059:
         raise ValueError
     return datetime(0, 0, n)
+
+def combine(date, time, tzinfo=True):
+    if tzinfo is True:
+        dt = date
+    else:
+        dt = date.replace(tzinfo=tzinfo)
+    return dt.add(time)
